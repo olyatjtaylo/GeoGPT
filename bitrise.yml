@@ -1,0 +1,59 @@
+format_version: "13"
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+project_type: ios
+workflows:
+  archive_and_export_app:
+    summary: Create an IPA file to install your app on a device or share it with your team.
+    description: The workflow will first clone your Git repository, cache and install your project's dependencies if any, export an IPA file from the project and save it.
+    steps:
+    - activate-ssh-key@4: {}
+    - git-clone@8: {}
+    - xcode-archive@5:
+        inputs:
+        - project_path: $BITRISE_PROJECT_PATH
+        - scheme: $BITRISE_SCHEME
+        - distribution_method: $BITRISE_DISTRIBUTION_METHOD
+        - automatic_code_signing: api-key
+        - cache_level: none
+    - deploy-to-bitrise-io@2: {}
+  build:
+    summary: Build your Xcode project.
+    description: The workflow will first clone your Git repository, cache and install your project's dependencies if any and build your project.
+    steps:
+    - activate-ssh-key@4: {}
+    - git-clone@8: {}
+    - xcode-build-for-test@3:
+        inputs:
+        - project_path: $BITRISE_PROJECT_PATH
+        - scheme: $BITRISE_SCHEME
+        - destination: platform=iOS Simulator,name=iPhone 8 Plus,OS=latest
+        - cache_level: none
+    - deploy-to-bitrise-io@2: {}
+  Gitclontesdeploy:
+    steps:
+    - activate-ssh-key@4: {}
+    - cocoapods-install@2: {}
+    - xcode-test@5: {}
+    - deploy-to-bitrise-io@2:
+        inputs:
+        - debug_mode: "true"
+meta:
+  bitrise.io:
+    stack: osx-xcode-15.2.x
+    machine_type_id: g2-m1.4core
+app:
+  envs:
+  - opts:
+      is_expand: false
+    BITRISE_PROJECT_PATH: Samples.xcodeproj
+  - opts:
+      is_expand: false
+    BITRISE_SCHEME: Samples
+  - opts:
+      is_expand: false
+    BITRISE_DISTRIBUTION_METHOD: app-store
+trigger_map:
+- push_branch: main
+  workflow: build
+- pull_request_source_branch: '*'
+  workflow: build
